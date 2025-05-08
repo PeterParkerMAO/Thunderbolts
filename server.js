@@ -32,6 +32,13 @@ app.post('/times', async (req, res) => {
 app.post('/jogos', async (req, res) => {
     const { time1_id, time2_id, placar_time1, placar_time2 } = req.body;
 
+    const time1Existente = await client.query('SELECT 1 FROM times WHERE id = $1', [time1_id]);
+    const time2Existente = await client.query('SELECT 1 FROM times WHERE id = $1', [time2_id]);
+
+    if (time1Existente.rowCount === 0 || time2Existente.rowCount === 0) {
+        return res.status(400).json({ error: 'Um ou ambos os times não existem!' });
+    }
+
     let pontosTime1 = 0, pontosTime2 = 0, saldoTime1 = placar_time1 - placar_time2, saldoTime2 = placar_time2 - placar_time1;
     if (placar_time1 > placar_time2) {
         pontosTime1 = 3;
