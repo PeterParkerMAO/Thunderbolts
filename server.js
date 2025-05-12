@@ -10,7 +10,7 @@ const client = new Client({
     user: 'postgres',
     host: 'localhost',
     database: 'thunderbolts_db',
-    password: '1234',
+    password: '123456',
     port: 5432,
 });
 
@@ -22,12 +22,56 @@ app.use(bodyParser.json());
 app.post('/times', async (req, res) => {
     const { nome } = req.body;
     try {
-        const result = await client.query('INSERT INTO times (nome) VALUES ($1) RETURNING *', [nome]);
-        res.status(201).json(result.rows[0]);
+        const result = await client.query(
+            'INSERT INTO times (nome) VALUES ($1) RETURNING *',
+            [nome]
+        );
+        const time = result.rows[0];
+
+        await client.query(
+            'INSERT INTO ranking (time_id, pontos, saldo_gols) VALUES ($1, 0, 0)',
+            [time.id]
+        );
+
+        res.status(201).json(time);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
+app.post('/jogadores', async (req, res) => {
+    const { nome, idade, time_id } = req.body;
+    try {
+        const result = await client.query(
+            'INSERT INTO jogadores (nome, idade, time_id) VALUES ($1, $2, $3) RETURNING *',
+            [nome, idade, time_id]
+        );
+        const jogador = result.rows[0];
+
+        res.status(201).json(jogador);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/jogadores/:id', async (req, res) => {
+    const { nome, idade, time_id } = req.body;
+    const { id } = req.params;
+    try {
+        const result = await client.query(
+            'UPDATE jogadores SET nome = $1, idade = $2, time_id = $3 WHERE id = $4 RETURNING *',
+            [nome, idade, time_id, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({error: 'Jogador não encontrado!'});
+        }
+
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+})
 
 app.post('/jogos', async (req, res) => {
     const { time1_id, time2_id, placar_time1, placar_time2 } = req.body;
